@@ -1,0 +1,44 @@
+[
+  {
+    "observation_id": "demo-feb-005",
+    "reported_identifier": "A1B2C3",
+    "observed_at": "2026-02-05T09:00:00Z",
+    "latitude": 40.7128,
+    "longitude": -74.006,
+    "metadata": {
+      "altitude_ft": 34000,
+      "source": "receiver-22"
+    }
+  },
+  {
+    "observation_id": "demo-jan-015",
+    "reported_identifier": "A1B2C3",
+    "observed_at": "2026-01-15T12:30:00Z",
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "metadata": {
+      "altitude_ft": 32000,
+      "source": "receiver-17"
+    }
+  },
+  {
+    "observation_id": "demo-boundary",
+    "reported_identifier": "A1B2C3",
+    "observed_at": "2026-02-01T00:00:00Z",
+    "latitude": 39.0997,
+    "longitude": -94.5786,
+    "metadata": {
+      "note": "exact reassignment boundary"
+    }
+  },
+  {
+    "observation_id": "demo-second-identifier",
+    "reported_identifier": "D4E5F6",
+    "observed_at": "2026-01-20T18:45:00Z",
+    "latitude": 41.8781,
+    "longitude": -87.6298,
+    "metadata": {
+      "note": "same stable aircraft, different reported identifier"
+    }
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "mapping_id": "demo-map-a1b2c3-jan",
+    "reported_identifier": "A1B2C3",
+    "aircraft_id": "aircraft-001",
+    "valid_from": "2026-01-01T00:00:00Z",
+    "valid_to": "2026-02-01T00:00:00Z"
+  },
+  {
+    "mapping_id": "demo-map-a1b2c3-feb",
+    "reported_identifier": "A1B2C3",
+    "aircraft_id": "aircraft-002",
+    "valid_from": "2026-02-01T00:00:00Z",
+    "valid_to": null
+  },
+  {
+    "mapping_id": "demo-map-d4e5f6",
+    "reported_identifier": "D4E5F6",
+    "aircraft_id": "aircraft-001",
+    "valid_from": "2026-01-01T00:00:00Z",
+    "valid_to": null
+  }
+]

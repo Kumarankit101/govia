@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Ingest aircraft reports and inspect resolved movement histories." />
+    <title>Govia · Aircraft history</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Govia aircraft history home">
+        <span class="brand-mark" aria-hidden="true">G</span>
+        <span>
+          <strong>Govia</strong>
+          <small>Aircraft history</small>
+        </span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#history">History</a>
+        <a href="#ingest">Ingest</a>
+        <a href="/docs">API docs</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Movement resolution console</p>
+          <h1 id="page-title">Find the aircraft behind every report.</h1>
+          <p class="hero-copy">
+            Reports remain intact. Time-bounded identity mappings resolve them into a single,
+            ordered aircraft history—even when data arrives late.
+          </p>
+        </div>
+        <div class="service-status" title="This checks that the local API is responding">
+          <span id="health-dot" class="status-dot pending"></span>
+          <span id="health-text">Checking local service…</span>
+        </div>
+      </section>
+
+      <section id="history" class="panel history-panel" aria-labelledby="history-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Search</p>
+            <h2 id="history-title">Aircraft movement history</h2>
+          </div>
+          <p>Filters include <strong>from</strong> and exclude <strong>to</strong>.</p>
+        </div>
+
+        <form id="history-form" class="search-form">
+          <label class="field field-grow">
+            <span>Aircraft ID</span>
+            <input id="aircraft-id" name="aircraft_id" value="aircraft-001" required />
+          </label>
+          <label class="field">
+            <span>From <em>optional</em></span>
+            <input id="history-from" name="from" placeholder="2026-01-01T00:00:00Z" />
+          </label>
+          <label class="field">
+            <span>To <em>optional</em></span>
+            <input id="history-to" name="to" placeholder="2026-02-01T00:00:00Z" />
+          </label>
+          <button class="button primary" type="submit">Search history</button>
+        </form>
+
+        <div id="history-state" class="state-card empty-state" role="status">
+          <span class="state-icon" aria-hidden="true">↗</span>
+          <div>
+            <strong>Ready to search</strong>
+            <p>Enter an aircraft ID to view its resolved reports.</p>
+          </div>
+        </div>
+
+        <div id="history-results" class="results" hidden>
+          <div class="results-summary">
+            <p><strong id="result-count">0 reports</strong> <span id="result-aircraft"></span></p>
+            <span>Sorted oldest to newest</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Observed at</th>
+                  <th>Observation</th>
+                  <th>Identifier</th>
+                  <th>Position</th>
+                  <th>Mapping</th>
+                  <th><span class="sr-only">Inspect</span></th>
+                </tr>
+              </thead>
+              <tbody id="history-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <div id="ingest" class="workspace-grid">
+        <section class="panel" aria-labelledby="ingest-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Write</p>
+              <h2 id="ingest-title">Ingest data</h2>
+            </div>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Ingestion type">
+            <button id="observation-tab" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="observation-panel">Position report</button>
+            <button id="mapping-tab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="mapping-panel">Identity mapping</button>
+          </div>
+
+          <div id="observation-panel" role="tabpanel" aria-labelledby="observation-tab">
+            <form id="observation-form" class="json-form">
+              <label class="field">
+                <span>Report JSON</span>
+                <textarea id="observation-json" spellcheck="false" rows="15">{
+  "observation_id": "obs-jan-001",
+  "reported_identifier": "A1B2C3",
+  "observed_at": "2026-01-10T10:00:00Z",
+  "latitude": 37.7749,
+  "longitude": -122.4194,
+  "metadata": {
+    "altitude_ft": 32000,
+    "groundspeed_knots": 450,
+    "source": "receiver-17"
+  }
+}</textarea>
+              </label>
+              <div class="form-footer">
+                <span id="observation-status" class="form-status" role="status"></span>
+                <button class="button primary" type="submit">Submit report</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="mapping-panel" role="tabpanel" aria-labelledby="mapping-tab" hidden>
+            <form id="mapping-form" class="json-form">
+              <label class="field">
+                <span>Mapping JSON</span>
+                <textarea id="mapping-json" spellcheck="false" rows="15">{
+  "mapping_id": "map-jan-001",
+  "reported_identifier": "A1B2C3",
+  "aircraft_id": "aircraft-001",
+  "valid_from": "2026-01-01T00:00:00Z",
+  "valid_to": "2026-02-01T00:00:00Z"
+}</textarea>
+              </label>
+              <div class="form-footer">
+                <span id="mapping-status" class="form-status" role="status"></span>
+                <button class="button primary" type="submit">Submit mapping</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel inspector-panel" aria-labelledby="inspector-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Inspect</p>
+              <h2 id="inspector-title">Original report</h2>
+            </div>
+          </div>
+          <form id="lookup-form" class="lookup-form">
+            <label class="field field-grow">
+              <span>Observation ID</span>
+              <input id="lookup-id" placeholder="obs-jan-001" required />
+            </label>
+            <button class="button secondary" type="submit">Look up</button>
+          </form>
+          <div id="inspector-state" class="state-card empty-state" role="status">
+            <span class="state-icon" aria-hidden="true">{ }</span>
+            <div>
+              <strong>No report selected</strong>
+              <p>Look up an ID or inspect a history row.</p>
+            </div>
+          </div>
+          <div id="inspector-result" hidden>
+            <div id="association-badge" class="association-badge"></div>
+            <pre id="original-json"></pre>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <span>Local assessment build</span>
+      <span>Half-open intervals · Durable SQLite storage</span>
+    </footer>
+  </body>
+</html>
