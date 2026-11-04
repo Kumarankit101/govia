@@ -192,4 +192,4 @@ available through package exports and a compatibility module.
 
 Approximate active time: **2 hours** for requirements analysis, implementation, automated tests, manual verification, and documentation. Nothing required by the brief is known to be unfinished.
 
-The implementation was produced with OpenAI Codex as an AI coding assistant. It helped interpret the supplied assessment, draft code and tests, execute the test suite, and review the result. No external data, proprietary code, or paid service was used. The complete AI prompt record is in [docs/AI_USAGE.md](docs/AI_USAGE.md).
+The implementation was produced with OpenAI Codex as an AI coding assistant. It helped interpret the supplied assessment, draft code and tests, execute the test suite, and review the result. No external data, proprietary code, or paid service was used.

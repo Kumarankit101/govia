@@ -8,4 +8,5 @@ data/*.db
 data/*.db-*
 .playwright-cli/
 output/
+docs/AI_USAGE.md
 .DS_Store
