@@ -1,4 +1,5 @@
 const byId = (id) => document.getElementById(id);
+let inspectorReturnFocus = null;
 
 function setState(element, kind, title, message) {
   const icons = { loading: "↻", empty: "↗", error: "!" };
@@ -90,7 +91,30 @@ function formatCoordinate(value) {
   return typeof value === "number" ? value.toFixed(4).replace(/\.?0+$/, "") : value;
 }
 
+function formatHistoryTimestamp(value) {
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime()) ? value : instant.toISOString();
+}
+
+function openInspector() {
+  const modal = byId("inspector-modal");
+  if (!modal.hidden) return;
+  inspectorReturnFocus = document.activeElement;
+  modal.hidden = false;
+  document.body.classList.add("modal-open");
+  byId("close-inspector").focus();
+}
+
+function closeInspector() {
+  const modal = byId("inspector-modal");
+  if (modal.hidden) return;
+  modal.hidden = true;
+  document.body.classList.remove("modal-open");
+  if (inspectorReturnFocus instanceof HTMLElement) inspectorReturnFocus.focus();
+}
+
 async function inspectObservation(observationId, knownItem = null) {
+  openInspector();
   const state = byId("inspector-state");
   const result = byId("inspector-result");
   result.hidden = true;
@@ -111,7 +135,6 @@ async function inspectObservation(observationId, knownItem = null) {
     byId("original-json").textContent = JSON.stringify(response.observation, null, 2);
     state.hidden = true;
     result.hidden = false;
-    if (window.innerWidth < 901) byId("inspector-title").scrollIntoView({ behavior: "smooth" });
   } catch (error) {
     setState(state, "error", "Could not load report", messageFrom(error));
   }
@@ -132,7 +155,7 @@ function renderHistory(data) {
     const observation = item.observation;
     const row = document.createElement("tr");
     const values = [
-      observation.observed_at,
+      formatHistoryTimestamp(observation.observed_at),
       observation.observation_id,
       observation.reported_identifier,
       `${formatCoordinate(observation.latitude)}, ${formatCoordinate(observation.longitude)}`,
@@ -141,6 +164,9 @@ function renderHistory(data) {
       const cell = document.createElement("td");
       cell.textContent = value;
       if (index === 1 || index === 2) cell.className = "mono";
+      if (index === 0 && value !== observation.observed_at) {
+        cell.title = `Original: ${observation.observed_at}`;
+      }
       row.appendChild(cell);
     });
     const mappingCell = document.createElement("td");
@@ -190,6 +216,13 @@ byId("history-form").addEventListener("submit", async (event) => {
 byId("lookup-form").addEventListener("submit", (event) => {
   event.preventDefault();
   inspectObservation(byId("lookup-id").value);
+});
+byId("close-inspector").addEventListener("click", closeInspector);
+byId("inspector-modal").addEventListener("click", (event) => {
+  if (event.target === event.currentTarget) closeInspector();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !byId("inspector-modal").hidden) closeInspector();
 });
 byId("observation-form").addEventListener("submit", (event) => submitJson(event, "/observations", "observation-json", "observation-status", "Report"));
 byId("mapping-form").addEventListener("submit", (event) => submitJson(event, "/identity-mappings", "mapping-json", "mapping-status", "Mapping"));

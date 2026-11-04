@@ -26,7 +26,35 @@ Run all automated tests:
 pytest
 ```
 
-The suite contains 45 tests covering late and out-of-order input, retries, changed-content conflicts, interval overlaps and boundaries, reassigned and combined identifiers, filtering and deterministic ordering, validation, original JSON preservation, restart persistence, and concurrent conflicting requests.
+The suite contains 57 tests covering late and out-of-order input, retries, changed-content conflicts, interval overlaps and boundaries, reassigned and combined identifiers, filtering and deterministic ordering, validation, original JSON preservation, restart persistence, concurrent conflicting requests, and generated dataset integrity.
+
+## Generate the full scale database
+
+Build the deterministic dataset requested for scale and rule testing:
+
+```bash
+python -m scripts.generate_scale_data
+```
+
+This atomically creates `data/govia-scale.db` with exactly 100,000 observations
+and 10,000 mappings. It refuses to overwrite an existing database unless
+`--replace` is supplied. Stop the API before replacing a database that it uses.
+Counts can be changed for quicker experiments:
+
+```bash
+python -m scripts.generate_scale_data \
+  --database data/smoke.db --observations 1000 --mappings 100
+```
+
+The generated records deliberately cover all supported timestamp spellings,
+latitude/longitude endpoints, nested metadata with every JSON value type,
+omitted versus empty metadata, exact half-open interval boundaries, open-ended
+mappings, identifier reassignment, several identifiers resolving to the same
+aircraft, and observations with no matching mapping. Data is inserted through
+the production validators into the production schema. The command prints a
+JSON verification summary after generation. Invalid and deliberately
+conflicting payloads are not inserted into the database; those cases live in
+the automated tests because the service must reject them.
 
 ## Reproduce the required scenario
 

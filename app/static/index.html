@@ -155,34 +155,45 @@
           </div>
         </section>
 
-        <section class="panel inspector-panel" aria-labelledby="inspector-title">
-          <div class="section-heading compact">
-            <div>
-              <p class="eyebrow">Inspect</p>
-              <h2 id="inspector-title">Original report</h2>
-            </div>
-          </div>
-          <form id="lookup-form" class="lookup-form">
-            <label class="field field-grow">
-              <span>Observation ID</span>
-              <input id="lookup-id" placeholder="obs-jan-001" required />
-            </label>
-            <button class="button secondary" type="submit">Look up</button>
-          </form>
-          <div id="inspector-state" class="state-card empty-state" role="status">
-            <span class="state-icon" aria-hidden="true">{ }</span>
-            <div>
-              <strong>No report selected</strong>
-              <p>Look up an ID or inspect a history row.</p>
-            </div>
-          </div>
-          <div id="inspector-result" hidden>
-            <div id="association-badge" class="association-badge"></div>
-            <pre id="original-json"></pre>
-          </div>
-        </section>
       </div>
     </main>
+
+    <div id="inspector-modal" class="modal-backdrop" hidden>
+      <section
+        class="inspector-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="inspector-title"
+        aria-describedby="inspector-description"
+      >
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Inspect</p>
+            <h2 id="inspector-title">Original report</h2>
+            <p id="inspector-description">Stored exactly as it was submitted.</p>
+          </div>
+          <button id="close-inspector" class="modal-close" type="button" aria-label="Close report inspector">×</button>
+        </div>
+        <form id="lookup-form" class="lookup-form">
+          <label class="field field-grow">
+            <span>Observation ID</span>
+            <input id="lookup-id" placeholder="obs-jan-001" required />
+          </label>
+          <button class="button secondary" type="submit">Look up</button>
+        </form>
+        <div id="inspector-state" class="state-card empty-state" role="status">
+          <span class="state-icon" aria-hidden="true">{ }</span>
+          <div>
+            <strong>No report selected</strong>
+            <p>Enter an observation ID to load its original report.</p>
+          </div>
+        </div>
+        <div id="inspector-result" hidden>
+          <div id="association-badge" class="association-badge"></div>
+          <pre id="original-json"></pre>
+        </div>
+      </section>
+    </div>
 
     <footer>
       <span>Local assessment build</span>

@@ -117,7 +117,7 @@ tbody tr:hover { background: #fbfcfb; }
 .mapping-chip { display: inline-flex; padding: 4px 7px; color: var(--forest); background: #eaf2ef; border-radius: 5px; font-family: monospace; font-size: 11px; }
 .inspect-button { color: var(--forest-light); background: transparent; border: 0; cursor: pointer; font-weight: 750; }
 
-.workspace-grid { display: grid; grid-template-columns: minmax(0, 1.04fr) minmax(360px, .96fr); gap: 22px; align-items: start; }
+.workspace-grid { display: grid; gap: 22px; }
 .tabs { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; margin-bottom: 18px; border-radius: 10px; background: #edf2f0; }
 .tab { height: 38px; border: 0; border-radius: 7px; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; font-weight: 750; }
 .tab.active { color: var(--forest); background: white; box-shadow: 0 2px 8px rgba(23,63,54,.08); }
@@ -127,11 +127,53 @@ tbody tr:hover { background: #fbfcfb; }
 .form-status.success { color: var(--success); }
 .form-status.error { color: var(--danger); }
 .lookup-form { display: flex; align-items: end; gap: 10px; }
-.inspector-panel { position: sticky; top: 98px; }
-.inspector-panel .state-card { min-height: 294px; }
 .association-badge { margin: 20px 0 10px; padding: 10px 12px; border-radius: 9px; color: var(--forest); background: #eaf2ef; font-size: 12px; line-height: 1.5; }
 .association-badge.unresolved { color: #80501f; background: var(--accent-soft); }
 pre { max-height: 430px; margin: 0; padding: 17px; overflow: auto; color: #e9f1ee; background: #15211e; border-radius: 11px; font: 12px/1.65 "SFMono-Regular", Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+
+body.modal-open { overflow: hidden; }
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(13, 27, 23, .58);
+  backdrop-filter: blur(7px);
+  animation: modal-fade .16s ease-out;
+}
+.inspector-modal {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 28px;
+  background: var(--paper);
+  border: 1px solid rgba(255,255,255,.75);
+  border-radius: 18px;
+  box-shadow: 0 30px 90px rgba(7, 27, 22, .28);
+  animation: modal-rise .18s ease-out;
+}
+.modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.modal-header h2 { font-size: 27px; }
+.modal-header > div > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.modal-close {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  background: #f7f9f8;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+.modal-close:hover { color: var(--ink); background: white; border-color: #b9cac5; }
+.modal-close:focus-visible { outline: 3px solid rgba(36,93,80,.18); outline-offset: 2px; }
+.inspector-modal .state-card { min-height: 220px; }
+@keyframes modal-fade { from { opacity: 0; } }
+@keyframes modal-rise { from { opacity: 0; transform: translateY(12px) scale(.985); } }
 
 footer { min-height: 72px; padding: 0 max(24px, calc((100vw - 1180px) / 2)); display: flex; justify-content: space-between; align-items: center; gap: 20px; color: var(--muted); background: white; border-top: 1px solid var(--line); font-size: 11px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -141,8 +183,6 @@ footer { min-height: 72px; padding: 0 max(24px, calc((100vw - 1180px) / 2)); dis
   .service-status { display: none; }
   .search-form { grid-template-columns: 1fr 1fr; }
   .search-form .field-grow { grid-column: span 2; }
-  .workspace-grid { grid-template-columns: 1fr; }
-  .inspector-panel { position: static; }
 }
 @media (max-width: 620px) {
   .site-header { padding: 0 18px; }
@@ -155,5 +195,7 @@ footer { min-height: 72px; padding: 0 max(24px, calc((100vw - 1180px) / 2)); dis
   .search-form .field-grow { grid-column: auto; }
   .results-summary > span { display: none; }
   .lookup-form { flex-direction: column; align-items: stretch; }
+  .modal-backdrop { padding: 12px; place-items: end center; }
+  .inspector-modal { width: 100%; max-height: calc(100vh - 24px); padding: 22px 18px; border-radius: 18px 18px 12px 12px; }
   footer { padding: 20px; flex-direction: column; align-items: flex-start; }
 }
