@@ -36,6 +36,24 @@ def test_observation_same_id_different_content_conflicts_without_overwrite(clien
     assert client.get("/observations/obs-001").json()["observation"] == observation
 
 
+def test_observation_retry_compares_timestamp_by_instant_and_preserves_original(client, observation):
+    original = deepcopy(observation)
+    original["observed_at"] = "2026-01-10T10:00:00.1Z"
+    assert client.post("/observations", json=original).status_code == 201
+
+    retry = deepcopy(original)
+    retry["observed_at"] = "2026-01-10T10:00:00.100+00:00"
+    response = client.post("/observations", json=retry)
+
+    assert response.status_code == 200
+    assert response.json()["observation"] == original
+    assert client.get("/observations/obs-001").json()["observation"] == original
+
+    different_instant = deepcopy(retry)
+    different_instant["observed_at"] = "2026-01-10T10:00:00.101Z"
+    assert client.post("/observations", json=different_instant).status_code == 409
+
+
 def test_json_types_and_metadata_presence_are_content(client, observation):
     without_metadata = {key: value for key, value in observation.items() if key != "metadata"}
     assert client.post("/observations", json=without_metadata).status_code == 201
@@ -62,6 +80,22 @@ def test_mapping_retry_precedes_overlap_check(client, mapping):
     retry = client.post("/identity-mappings", json=reordered)
     assert retry.status_code == 200
     assert retry.json()["identity_mapping"] == mapping
+
+def test_mapping_retry_compares_timestamps_by_instant_and_preserves_original(client, mapping):
+    assert client.post("/identity-mappings", json=mapping).status_code == 201
+    retry_payload = {
+        **mapping,
+        "valid_from": "2026-01-01T00:00:00.000+00:00",
+        "valid_to": "2026-02-01T00:00:00+00:00",
+    }
+
+    retry = client.post("/identity-mappings", json=retry_payload)
+
+    assert retry.status_code == 200
+    assert retry.json()["identity_mapping"] == mapping
+
+    different_interval = {**retry_payload, "valid_to": "2026-02-01T00:00:00.001Z"}
+    assert client.post("/identity-mappings", json=different_interval).status_code == 409
 
 
 def test_mapping_id_conflict_and_interval_overlap(client, mapping):

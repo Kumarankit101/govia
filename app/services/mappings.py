@@ -31,6 +31,7 @@ def create_mapping(
                 existing["original_json"],
                 payload,
                 conflict_message="mapping_id already exists with different content",
+                timestamp_fields=("valid_from", "valid_to"),
             )
             assert stored is not None
             return MappingResult(stored)

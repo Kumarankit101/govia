@@ -135,7 +135,7 @@ curl http://127.0.0.1:8000/observations/obs-001
 
 Associations are a query-time join between immutable observations and the mappings committed when the query begins. This makes a late mapping immediately expose older reports without a repair job or resubmission, and it avoids storing stale association fields on the original report. Mapping intervals and filters use integer UTC epoch milliseconds and half-open comparisons (`start <= instant < end`). The original timestamp spelling and complete original report are stored as JSON and returned from that JSON.
 
-The JSON retry comparison is recursive: object key order is ignored, array order is preserved, booleans remain distinct from numbers, strings are exact, and numerically equal JSON numbers compare equal. Omitting `metadata` differs from supplying `{}`. IDs are not trimmed or case-normalized.
+The JSON retry comparison is recursive: object key order is ignored, array order is preserved, booleans remain distinct from numbers, ordinary strings are exact, and numerically equal JSON numbers compare equal. Timestamp fields compare by instant, so equivalent `Z` and `+00:00` spellings are retries while the first accepted spelling remains stored. Omitting `metadata` differs from supplying `{}`. IDs are not trimmed or case-normalized.
 
 Unexpected top-level fields are rejected with `400`. This choice catches likely producer mistakes while arbitrary nested JSON inside `metadata` remains accepted. Duplicate object keys are left to the JSON parser, as allowed by the brief.
 

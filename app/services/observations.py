@@ -31,6 +31,7 @@ def create_observation(
                 existing["original_json"],
                 payload,
                 conflict_message="observation_id already exists with different content",
+                timestamp_fields=("observed_at",),
             )
             assert stored is not None
             association = current_association(
