@@ -217,6 +217,10 @@ byId("lookup-form").addEventListener("submit", (event) => {
   event.preventDefault();
   inspectObservation(byId("lookup-id").value);
 });
+byId("quick-lookup-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  inspectObservation(byId("quick-lookup-id").value);
+});
 byId("close-inspector").addEventListener("click", closeInspector);
 byId("inspector-modal").addEventListener("click", (event) => {
   if (event.target === event.currentTarget) closeInspector();

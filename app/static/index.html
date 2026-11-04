@@ -155,6 +155,32 @@
           </div>
         </section>
 
+        <section class="panel lookup-panel" aria-labelledby="quick-lookup-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Read</p>
+              <h2 id="quick-lookup-title">Fetch observation</h2>
+            </div>
+          </div>
+          <p class="lookup-copy">
+            Retrieve any original report by ID, including reports that do not have a matching mapping.
+          </p>
+          <form id="quick-lookup-form" class="quick-lookup-form">
+            <label class="field">
+              <span>Observation ID</span>
+              <input id="quick-lookup-id" value="obs-0000000" placeholder="obs-0000000" required />
+            </label>
+            <button class="button primary" type="submit">Fetch observation</button>
+          </form>
+          <div class="lookup-hint">
+            <span class="state-icon" aria-hidden="true">{ }</span>
+            <div>
+              <strong>Original data stays intact</strong>
+              <p>The result opens in the inspector overlay with its current association.</p>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
 

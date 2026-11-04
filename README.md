@@ -1,6 +1,6 @@
 # Govia Aircraft History
 
-A local backend and small web interface for ingesting aircraft position reports and resolving them through time-bounded identity mappings. Reports and mappings can arrive late, out of order, or repeatedly; the service preserves accepted reports and computes the current association when queried.
+FastAPI and SQLite service for ingesting position reports and resolving time-bounded aircraft identities.
 
 ## Quick start
 
@@ -14,7 +14,7 @@ python -m scripts.init_db
 uvicorn app.main:app --reload
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for the interface or [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for interactive API documentation. The default database is `data/govia.db`; it is initialized automatically on startup. To use another path:
+Open the [interface](http://127.0.0.1:8000) or [API docs](http://127.0.0.1:8000/docs). The default database is `data/govia.db`. To change it:
 
 ```bash
 GOVIA_DB_PATH=/absolute/path/to/govia.db uvicorn app.main:app
@@ -26,52 +26,37 @@ Run all automated tests:
 pytest
 ```
 
-The suite contains 57 tests covering late and out-of-order input, retries, changed-content conflicts, interval overlaps and boundaries, reassigned and combined identifiers, filtering and deterministic ordering, validation, original JSON preservation, restart persistence, concurrent conflicting requests, and generated dataset integrity.
+The 57 tests cover validation, late and out-of-order data, retries, conflicts, boundaries, filtering, ordering, persistence, concurrency, and scale-data integrity.
 
 ## Generate the full scale database
-
-Build the deterministic dataset requested for scale and rule testing:
 
 ```bash
 python -m scripts.generate_scale_data
 ```
 
-This atomically creates `data/govia-scale.db` with exactly 100,000 observations
-and 10,000 mappings. It refuses to overwrite an existing database unless
-`--replace` is supplied. Stop the API before replacing a database that it uses.
-Counts can be changed for quicker experiments:
+Creates `data/govia-scale.db` with 100,000 observations and 10,000 mappings. It does not overwrite an existing file without `--replace`. Custom counts:
 
 ```bash
 python -m scripts.generate_scale_data \
   --database data/smoke.db --observations 1000 --mappings 100
 ```
 
-The generated records deliberately cover all supported timestamp spellings,
-latitude/longitude endpoints, nested metadata with every JSON value type,
-omitted versus empty metadata, exact half-open interval boundaries, open-ended
-mappings, identifier reassignment, several identifiers resolving to the same
-aircraft, and observations with no matching mapping. Data is inserted through
-the production validators into the production schema. The command prints a
-JSON verification summary after generation. Invalid and deliberately
-conflicting payloads are not inserted into the database; those cases live in
-the automated tests because the service must reject them.
+Generated data covers timestamp variants, coordinate boundaries, metadata shapes, half-open intervals, reassignment, combined identifiers, and unresolved observations. Invalid cases remain in automated tests.
 
 ## Reproduce the required scenario
-
-With the server running against a fresh database, run:
 
 ```bash
 python -m scripts.replay_demo
 ```
 
-The script uses [sample-data/demo-observations.json](sample-data/demo-observations.json) and [sample-data/demo-mappings.json](sample-data/demo-mappings.json). It submits the February report before the January report, verifies that both histories are initially empty, then adds mappings and shows:
+Using the included [observations](sample-data/demo-observations.json) and [mappings](sample-data/demo-mappings.json), the script verifies:
 
 - the January `A1B2C3` report under `aircraft-001`;
 - the February report and the report at exactly `2026-02-01T00:00:00Z` under `aircraft-002`;
 - an `aircraft-001` history combined from `A1B2C3` and `D4E5F6`;
 - exact observation and mapping retries returning `200` without extra rows.
 
-The replay is idempotent: a second run receives `200` for existing records and produces the same histories.
+The replay is idempotent.
 
 ## API
 
@@ -87,8 +72,7 @@ All errors use this shape:
 }
 ```
 
-This envelope also applies to framework-level routing errors such as unknown
-paths (`not_found`) and unsupported HTTP methods (`method_not_allowed`).
+The same envelope covers unknown paths and unsupported methods.
 
 ### `POST /observations`
 
@@ -159,32 +143,13 @@ curl http://127.0.0.1:8000/observations/obs-001
 
 ## Design decisions
 
-### Resolution and preservation
+- Store original JSON and separate indexed values.
+- Resolve identities at query time so late mappings apply immediately.
+- Use half-open millisecond intervals and semantic retry comparison.
+- Serialize writes with `BEGIN IMMEDIATE`; enforce overlap rules with a trigger.
+- Scope history queries through compound identifier/time indexes.
 
-Associations are a query-time join between immutable observations and the mappings committed when the query begins. This makes a late mapping immediately expose older reports without a repair job or resubmission, and it avoids storing stale association fields on the original report. Mapping intervals and filters use integer UTC epoch milliseconds and half-open comparisons (`start <= instant < end`). The original timestamp spelling and complete original report are stored as JSON and returned from that JSON.
-
-The JSON retry comparison is recursive: object key order is ignored, array order is preserved, booleans remain distinct from numbers, ordinary strings are exact, and numerically equal JSON numbers compare equal. Timestamp fields compare by instant, so equivalent `Z` and `+00:00` spellings are retries while the first accepted spelling remains stored. Omitting `metadata` differs from supplying `{}`. IDs are not trimmed or case-normalized.
-
-Unexpected top-level fields are rejected with `400`. This choice catches likely producer mistakes while arbitrary nested JSON inside `metadata` remains accepted. Duplicate object keys are left to the JSON parser, as allowed by the brief.
-
-### Database and concurrency
-
-SQLite runs in WAL mode with `synchronous=FULL` and a busy timeout. Each write executes in `BEGIN IMMEDIATE`, so the ID/retry check, overlap check, and insert occur under the single-writer lock. Primary keys prevent duplicate IDs, and a database trigger independently rejects overlapping mappings. A query sees a committed SQLite snapshot, never a partially applied write. The database therefore remains correct with concurrent threads or application processes sharing the file.
-
-The schema is in [app/schema.sql](app/schema.sql) and startup initialization is idempotent.
-
-### Indexing and expected scale
-
-The two important indexes are:
-
-```text
-observations(reported_identifier, observed_at_ms, observation_id)
-identity_mappings(aircraft_id, valid_from_ms, valid_to_ms, reported_identifier)
-```
-
-A history query first selects only mappings for the requested `aircraft_id`. For each of those mappings, SQLite performs a bounded lookup into the observation index by identifier and observation time; optional history filters further narrow the same range. It does not scan all 100,000 reports. A separate `(reported_identifier, valid_from_ms, valid_to_ms)` index supports association and overlap checks. Final ordering is by normalized observation instant, then `observation_id`.
-
-At the stated scale of roughly 100,000 reports and 10,000 mappings, this layout keeps writes simple and scoped reads indexed. Pagination is deliberately omitted per the requirements.
+See [DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) for alternatives and tradeoffs.
 
 ## Project layout
 
@@ -201,13 +166,8 @@ app/static/                  dependency-free responsive web interface
 tests/                       API, persistence, and concurrency tests
 sample-data/                 reproducible synthetic scenario
 scripts/replay_demo.py       scenario replay and output verification
+scripts/generate_scale_data.py deterministic 100k/10k scale dataset generator
 ```
-
-Routes contain only HTTP parsing and response selection. Services own the
-create-or-conflict workflow and identity/history rules, repositories contain
-all application SQL, and the database package owns connection and transaction
-lifecycles. The original `app.database` and `app.validation` import paths remain
-available through package exports and a compatibility module.
 
 ## Known limitations and scope
 
@@ -218,6 +178,6 @@ available through package exports and a compatibility module.
 
 ## Time and assistance disclosure
 
-Approximate active time: **2 hours** for requirements analysis, implementation, automated tests, manual verification, and documentation. Nothing required by the brief is known to be unfinished.
+Active time: approximately **3.5 hours**. No required work is known to be unfinished.
 
-The implementation was produced with OpenAI Codex as an AI coding assistant. It helped interpret the supplied assessment, draft code and tests, execute the test suite, and review the result. No external data, proprietary code, or paid service was used.
+OpenAI Codex assisted with requirements analysis, implementation, tests, verification, and documentation. No external data, proprietary code, or paid service was used. See [AI_USAGE.md](docs/AI_USAGE.md).
