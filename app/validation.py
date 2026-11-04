@@ -126,7 +126,11 @@ def validate_observation(payload: dict[str, Any]) -> dict[str, Any]:
         value = payload[field]
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             errors.append({"field": field, "message": "Must be a finite JSON number"})
-        elif not math.isfinite(value):
+        # Calling math.isfinite() on an arbitrarily large Python integer first
+        # converts it to a float and can raise OverflowError. Integers are
+        # always finite, so only floats need the finiteness check; the direct
+        # comparisons below safely reject integers of any size.
+        elif isinstance(value, float) and not math.isfinite(value):
             errors.append({"field": field, "message": "Must be a finite JSON number"})
         elif not minimum <= value <= maximum:
             errors.append(

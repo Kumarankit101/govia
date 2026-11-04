@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.database import DEFAULT_DB_PATH, connect, initialize_database, serialized_write
 from app.validation import (
@@ -26,12 +27,16 @@ STATIC_DIR = Path(__file__).with_name("static")
 
 
 def error_response(
-    status_code: int, code: str, message: str, details: Any | None = None
+    status_code: int,
+    code: str,
+    message: str,
+    details: Any | None = None,
+    headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     error: dict[str, Any] = {"code": code, "message": message}
     if details is not None:
         error["details"] = details
-    return JSONResponse(status_code=status_code, content={"error": error})
+    return JSONResponse(status_code=status_code, content={"error": error}, headers=headers)
 
 
 def load_json(value: str) -> dict[str, Any]:
@@ -75,6 +80,19 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
         _request: Request, exc: InputValidationError
     ) -> JSONResponse:
         return error_response(400, "invalid_request", "Request validation failed", exc.details)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(
+        _request: Request, exc: StarletteHTTPException
+    ) -> JSONResponse:
+        codes = {404: "not_found", 405: "method_not_allowed"}
+        message = exc.detail if isinstance(exc.detail, str) else "HTTP request failed"
+        return error_response(
+            exc.status_code,
+            codes.get(exc.status_code, "http_error"),
+            message,
+            headers=exc.headers,
+        )
 
     @app.post("/observations", tags=["ingestion"])
     async def post_observation(request: Request) -> JSONResponse:

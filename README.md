@@ -59,6 +59,9 @@ All errors use this shape:
 }
 ```
 
+This envelope also applies to framework-level routing errors such as unknown
+paths (`not_found`) and unsupported HTTP methods (`method_not_allowed`).
+
 ### `POST /observations`
 
 Stores a position report. A new record returns `201`; an identical retry returns `200`. The response includes the untouched report and its currently available association:
