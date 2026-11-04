@@ -1,216 +1,38 @@
-from __future__ import annotations
+"""Backward-compatible imports for the validation module's original location."""
 
-import json
-import math
-import re
-from datetime import date, datetime
-from typing import Any
-
-
-UTC_TIMESTAMP = re.compile(
-    r"^(?P<base>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})"
-    r"(?P<fraction>\.\d{1,3})?(?P<zone>Z|\+00:00)$"
+from app.schemas.serialization import dump_json, load_json
+from app.schemas.validation import (
+    EPOCH_ORDINAL,
+    MAPPING_FIELDS,
+    OBSERVATION_FIELDS,
+    OBSERVATION_REQUIRED,
+    UTC_TIMESTAMP,
+    InputValidationError,
+    json_values_equal,
+    parse_json_object,
+    parse_timestamp,
+    validate_coordinates,
+    validate_interval,
+    validate_mapping,
+    validate_metadata,
+    validate_observation,
 )
-EPOCH_ORDINAL = date(1970, 1, 1).toordinal()
-OBSERVATION_FIELDS = {
-    "observation_id",
-    "reported_identifier",
-    "observed_at",
-    "latitude",
-    "longitude",
-    "metadata",
-}
-OBSERVATION_REQUIRED = OBSERVATION_FIELDS - {"metadata"}
-MAPPING_FIELDS = {
-    "mapping_id",
-    "reported_identifier",
-    "aircraft_id",
-    "valid_from",
-    "valid_to",
-}
 
-
-class InputValidationError(Exception):
-    def __init__(self, details: list[dict[str, str]]) -> None:
-        super().__init__("Request validation failed")
-        self.details = details
-
-
-def parse_json_object(raw_body: bytes) -> dict[str, Any]:
-    def reject_constant(value: str) -> None:
-        raise ValueError(f"{value} is not valid JSON")
-
-    try:
-        value = json.loads(raw_body.decode("utf-8"), parse_constant=reject_constant)
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
-        raise InputValidationError(
-            [{"field": "$", "message": f"Body must be valid JSON: {exc}"}]
-        ) from exc
-    if not isinstance(value, dict):
-        raise InputValidationError(
-            [{"field": "$", "message": "Request body must be a JSON object"}]
-        )
-    return value
-
-
-def _timestamp_to_milliseconds(value: Any, field: str) -> tuple[str | None, int | None, list[dict[str, str]]]:
-    if not isinstance(value, str):
-        return None, None, [{"field": field, "message": "Must be a UTC RFC3339 string"}]
-    match = UTC_TIMESTAMP.fullmatch(value)
-    if not match:
-        return None, None, [
-            {
-                "field": field,
-                "message": "Must end in Z or +00:00 and use at most three fractional digits",
-            }
-        ]
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None, None, [{"field": field, "message": "Must be a valid calendar timestamp"}]
-
-    milliseconds = (
-        (parsed.date().toordinal() - EPOCH_ORDINAL) * 86_400_000
-        + parsed.hour * 3_600_000
-        + parsed.minute * 60_000
-        + parsed.second * 1_000
-        + parsed.microsecond // 1_000
-    )
-    return value, milliseconds, []
-
-
-def parse_timestamp(value: Any, field: str) -> tuple[str, int]:
-    original, milliseconds, errors = _timestamp_to_milliseconds(value, field)
-    if errors:
-        raise InputValidationError(errors)
-    assert original is not None and milliseconds is not None
-    return original, milliseconds
-
-
-def _nonempty_string(payload: dict[str, Any], field: str, errors: list[dict[str, str]]) -> None:
-    value = payload.get(field)
-    if not isinstance(value, str) or value == "":
-        errors.append({"field": field, "message": "Must be a nonempty string"})
-
-
-def _check_fields(
-    payload: dict[str, Any], allowed: set[str], required: set[str], errors: list[dict[str, str]]
-) -> None:
-    for field in sorted(required - payload.keys()):
-        errors.append({"field": field, "message": "Field is required"})
-    for field in sorted(payload.keys() - allowed):
-        errors.append({"field": field, "message": "Unexpected top-level field"})
-
-
-def validate_observation(payload: dict[str, Any]) -> dict[str, Any]:
-    errors: list[dict[str, str]] = []
-    _check_fields(payload, OBSERVATION_FIELDS, OBSERVATION_REQUIRED, errors)
-    for field in ("observation_id", "reported_identifier"):
-        if field in payload:
-            _nonempty_string(payload, field, errors)
-
-    timestamp_text: str | None = None
-    timestamp_ms: int | None = None
-    if "observed_at" in payload:
-        timestamp_text, timestamp_ms, timestamp_errors = _timestamp_to_milliseconds(
-            payload["observed_at"], "observed_at"
-        )
-        errors.extend(timestamp_errors)
-
-    for field, minimum, maximum in (
-        ("latitude", -90, 90),
-        ("longitude", -180, 180),
-    ):
-        if field not in payload:
-            continue
-        value = payload[field]
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            errors.append({"field": field, "message": "Must be a finite JSON number"})
-        # Calling math.isfinite() on an arbitrarily large Python integer first
-        # converts it to a float and can raise OverflowError. Integers are
-        # always finite, so only floats need the finiteness check; the direct
-        # comparisons below safely reject integers of any size.
-        elif isinstance(value, float) and not math.isfinite(value):
-            errors.append({"field": field, "message": "Must be a finite JSON number"})
-        elif not minimum <= value <= maximum:
-            errors.append(
-                {"field": field, "message": f"Must be between {minimum} and {maximum}, inclusive"}
-            )
-
-    if "metadata" in payload and not isinstance(payload["metadata"], dict):
-        errors.append({"field": "metadata", "message": "Must be a JSON object when provided"})
-
-    if errors:
-        raise InputValidationError(errors)
-    assert timestamp_text is not None and timestamp_ms is not None
-    return {
-        "observation_id": payload["observation_id"],
-        "reported_identifier": payload["reported_identifier"],
-        "observed_at_text": timestamp_text,
-        "observed_at_ms": timestamp_ms,
-        "latitude": payload["latitude"],
-        "longitude": payload["longitude"],
-    }
-
-
-def validate_mapping(payload: dict[str, Any]) -> dict[str, Any]:
-    errors: list[dict[str, str]] = []
-    _check_fields(payload, MAPPING_FIELDS, MAPPING_FIELDS, errors)
-    for field in ("mapping_id", "reported_identifier", "aircraft_id"):
-        if field in payload:
-            _nonempty_string(payload, field, errors)
-
-    from_text: str | None = None
-    from_ms: int | None = None
-    if "valid_from" in payload:
-        from_text, from_ms, timestamp_errors = _timestamp_to_milliseconds(
-            payload["valid_from"], "valid_from"
-        )
-        errors.extend(timestamp_errors)
-
-    to_text: str | None = None
-    to_ms: int | None = None
-    if "valid_to" in payload:
-        if payload["valid_to"] is not None:
-            to_text, to_ms, timestamp_errors = _timestamp_to_milliseconds(
-                payload["valid_to"], "valid_to"
-            )
-            errors.extend(timestamp_errors)
-    if from_ms is not None and to_ms is not None and to_ms <= from_ms:
-        errors.append({"field": "valid_to", "message": "Must be later than valid_from"})
-
-    if errors:
-        raise InputValidationError(errors)
-    assert from_text is not None and from_ms is not None
-    return {
-        "mapping_id": payload["mapping_id"],
-        "reported_identifier": payload["reported_identifier"],
-        "aircraft_id": payload["aircraft_id"],
-        "valid_from_text": from_text,
-        "valid_from_ms": from_ms,
-        "valid_to_text": to_text,
-        "valid_to_ms": to_ms,
-    }
-
-
-def json_values_equal(left: Any, right: Any) -> bool:
-    """Compare JSON values while keeping booleans distinct from numbers."""
-    left_number = isinstance(left, (int, float)) and not isinstance(left, bool)
-    right_number = isinstance(right, (int, float)) and not isinstance(right, bool)
-    if left_number or right_number:
-        return left_number and right_number and left == right
-    if type(left) is not type(right):
-        return False
-    if isinstance(left, dict):
-        return left.keys() == right.keys() and all(
-            json_values_equal(left[key], right[key]) for key in left
-        )
-    if isinstance(left, list):
-        return len(left) == len(right) and all(
-            json_values_equal(a, b) for a, b in zip(left, right)
-        )
-    return left == right
-
-
-def dump_json(value: dict[str, Any]) -> str:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+__all__ = [
+    "EPOCH_ORDINAL",
+    "InputValidationError",
+    "MAPPING_FIELDS",
+    "OBSERVATION_FIELDS",
+    "OBSERVATION_REQUIRED",
+    "UTC_TIMESTAMP",
+    "dump_json",
+    "json_values_equal",
+    "load_json",
+    "parse_json_object",
+    "parse_timestamp",
+    "validate_coordinates",
+    "validate_interval",
+    "validate_mapping",
+    "validate_metadata",
+    "validate_observation",
+]

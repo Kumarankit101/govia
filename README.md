@@ -161,15 +161,25 @@ At the stated scale of roughly 100,000 reports and 10,000 mappings, this layout 
 ## Project layout
 
 ```text
-app/main.py                 API routes and response schemas
-app/validation.py           strict JSON, timestamp, and semantic retry validation
-app/database.py             connections and serialized transactions
-app/schema.sql              tables, indexes, and overlap trigger
-app/static/                 dependency-free responsive web interface
-tests/                      API, persistence, and concurrency tests
-sample-data/                reproducible synthetic scenario
-scripts/replay_demo.py      scenario replay and output verification
+app/main.py                  application factory and composition root
+app/api/                     routes, HTTP errors, and response construction
+app/services/                ingestion, idempotency, identity, and history rules
+app/repositories/            observation and mapping SQL operations
+app/schemas/                 JSON types, serialization, and strict validation
+app/database/                connections, initialization, and transactions
+app/validation.py            backward-compatible validation imports
+app/schema.sql               tables, indexes, and overlap trigger
+app/static/                  dependency-free responsive web interface
+tests/                       API, persistence, and concurrency tests
+sample-data/                 reproducible synthetic scenario
+scripts/replay_demo.py       scenario replay and output verification
 ```
+
+Routes contain only HTTP parsing and response selection. Services own the
+create-or-conflict workflow and identity/history rules, repositories contain
+all application SQL, and the database package owns connection and transaction
+lifecycles. The original `app.database` and `app.validation` import paths remain
+available through package exports and a compatibility module.
 
 ## Known limitations and scope
 
