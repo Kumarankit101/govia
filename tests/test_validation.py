@@ -125,3 +125,29 @@ def test_body_must_be_json_object_and_unexpected_fields_are_rejected(client, obs
 
     observation["unexpected"] = "value"
     assert client.post("/observations", json=observation).status_code == 400
+
+
+def test_out_of_range_number_nested_in_metadata_is_rejected(client):
+    response = client.post(
+        "/observations",
+        content=(
+            b'{"observation_id":"huge-nested","reported_identifier":"RID",'
+            b'"observed_at":"2026-01-01T00:00:00Z","latitude":0,"longitude":0,'
+            b'"metadata":{"value":1e400}}'
+        ),
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": {
+            "code": "invalid_request",
+            "message": "Request validation failed",
+            "details": [
+                {
+                    "field": "$",
+                    "message": "JSON numbers must be finite and within the supported range",
+                }
+            ],
+        }
+    }

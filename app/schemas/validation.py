@@ -42,8 +42,25 @@ def parse_json_object(raw_body: bytes) -> JsonObject:
     def reject_constant(value: str) -> None:
         raise ValueError(f"{value} is not valid JSON")
 
+    def parse_finite_float(value: str) -> float:
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            raise InputValidationError(
+                [
+                    {
+                        "field": "$",
+                        "message": "JSON numbers must be finite and within the supported range",
+                    }
+                ]
+            )
+        return parsed
+
     try:
-        value = json.loads(raw_body.decode("utf-8"), parse_constant=reject_constant)
+        value = json.loads(
+            raw_body.decode("utf-8"),
+            parse_constant=reject_constant,
+            parse_float=parse_finite_float,
+        )
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
         raise InputValidationError(
             [{"field": "$", "message": f"Body must be valid JSON: {exc}"}]
