@@ -26,7 +26,7 @@ Run all automated tests:
 pytest
 ```
 
-The 57 tests cover validation, late and out-of-order data, retries, conflicts, boundaries, filtering, ordering, persistence, concurrency, and scale-data integrity.
+The 59 tests cover validation, late and out-of-order data, retries, conflicts, boundaries, filtering, ordering, persistence, concurrency, packet replay content, and scale-data integrity.
 
 ## Generate the full scale database
 
@@ -57,6 +57,28 @@ Using the included [observations](sample-data/demo-observations.json) and [mappi
 - exact observation and mapping retries returning `200` without extra rows.
 
 The replay is idempotent.
+
+## Candidate packet verification
+
+Start the API with a fresh database:
+
+```bash
+PACKET_DB="$(mktemp -d)/govia.db"
+GOVIA_DB_PATH="$PACKET_DB" uvicorn app.main:app
+```
+
+In another terminal, run the supplied status and race replays:
+
+```bash
+python candidate-packet/replay.py --output /tmp/govia-responses.jsonl
+python candidate-packet/replay.py --races --output /tmp/govia-races.jsonl
+```
+
+The repository integration test also validates response content, all history checkpoints, original-report preservation, and stored race outcomes:
+
+```bash
+pytest tests/test_candidate_packet.py
+```
 
 ## API
 
@@ -165,6 +187,7 @@ app/schema.sql               tables, indexes, and overlap trigger
 app/static/                  dependency-free responsive web interface
 tests/                       API, persistence, and concurrency tests
 sample-data/                 reproducible synthetic scenario
+candidate-packet/            supplied replay fixtures and expected results
 scripts/replay_demo.py       scenario replay and output verification
 scripts/generate_scale_data.py deterministic 100k/10k scale dataset generator
 ```

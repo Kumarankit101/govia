@@ -442,3 +442,21 @@ check again
 update to 3.5 hr
 ```
 
+## Prompt 19
+
+```text
+I received the candidate packet. Compare it with the implementation and check whether changes are required.
+```
+
+## Prompt 20
+
+```text
+Check the original assignment and confirm compliance.
+```
+
+## Prompt 21
+
+```text
+Add the candidate packet and a content-checking integration test. The supplied replay checks statuses only; also verify history contents.
+```
+
